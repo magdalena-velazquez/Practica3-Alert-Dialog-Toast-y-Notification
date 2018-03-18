@@ -4,7 +4,11 @@ import android.app.Notification;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.ProgressDialog;
+import android.content.Context;
 import android.content.Intent;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.net.Uri;
 import android.os.Handler;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
@@ -12,8 +16,10 @@ import android.graphics.Color;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
+import android.support.v4.app.NotificationCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
+import android.util.Log;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -225,29 +231,150 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void showNotificationBigText(){
+        Bitmap icon = BitmapFactory.decodeResource(getResources(), R.drawable.notification_icon);
+        String textoNotifica = "La Facultad de Estudios Superiores Aragón es una entidad académica multidisciplinaria " +
+                "de la UNAM, ubicada en la zona norte del municipio de Nezahualcóyotl, Estado de México";
 
+        //Asignar el estilo BigText a la notificacion
+        NotificationCompat.BigTextStyle bigText = new NotificationCompat.BigTextStyle();
+        bigText.bigText(textoNotifica);
+        bigText.setSummaryText("Por: FesAragon");
+        NotificationCompat.Builder notification = new NotificationCompat.Builder(MainActivity.this, "")
+                .setContentTitle("Big Text Notification Example")
+                .setSmallIcon(R.drawable.ic_notification)
+                .setLargeIcon(icon)
+                .setStyle(bigText);
+        notification.setDefaults(Notification.DEFAULT_ALL);
+        Intent i = new Intent(getApplicationContext(), SecondActivity.class);
+        i.putExtra(NOTIFICACION, textoNotifica);
+        PendingIntent pi = PendingIntent.getActivity(getApplicationContext(), 0, i, 0);
+        notification.setContentIntent(pi);
+        // Asignar un ID a la Notificacion
+        int nId = 001;
+        NotificationManager nm = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+        nm.notify(nId, notification.build());
     }
 
     public void showNotificationInbox(){
+
+        NotificationCompat.InboxStyle iStyle = new NotificationCompat.InboxStyle();
+        for (int m = 1; m <= 5; m++){
+            iStyle.addLine("Nuevo Mensaje " + m);
+            iStyle.setSummaryText("+2 mas");
+        NotificationCompat.Builder notification = new NotificationCompat.Builder(getApplicationContext(), "")
+                .setSmallIcon(R.drawable.ic_notification)
+                .setContentTitle("Ejemplo Inbox Style Notification")
+                .setDefaults(Notification.DEFAULT_ALL)
+                .setStyle(iStyle);
+        Intent i = new Intent(getApplicationContext(), SecondActivity.class);
+        PendingIntent pi = PendingIntent.getActivity(getApplicationContext(), 0, i, 0);
+        notification.setContentIntent(pi);
+        int nId = 003;
+        NotificationManager nm = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+        nm.notify(nId, notification.build());
+        }
 
     }
 
     public void showNotificationPicture(){
 
+        NotificationCompat.BigPictureStyle bpStyle = new NotificationCompat.BigPictureStyle();
+
+        bpStyle.bigPicture(BitmapFactory.decodeResource(getResources(), R.drawable.zocalo)).build();
+        Intent i = new Intent(Intent.ACTION_VIEW, Uri.parse("http://www.unam.mx/"));
+        PendingIntent pi = PendingIntent.getActivity(MainActivity.this, 0, i, 0);
+        NotificationCompat.Builder notification = new NotificationCompat.Builder(getApplicationContext(), "")
+                .setSmallIcon(R.drawable.ic_notification)
+                .setContentTitle("Ejemplo de Notificacion Big Picture")
+                .addAction(android.R.drawable.ic_menu_share,"Compartir", pi)
+                .setStyle(bpStyle)
+                .setDefaults(Notification.DEFAULT_ALL)
+                .setContentIntent(pi);
+        int nId = 002;
+        NotificationManager nm = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+        nm.notify(nId, notification.build());
+
     }
 
     public void showProgressDialog(){
 
+        progressDialog= new ProgressDialog(this);
+        progressDialog.setMax(100);
+        progressDialog.setMessage("Descargando Archivo");
+        progressDialog.setTitle("Ejemplo de Progress Dialog");
+
+        progressDialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
+        progressDialog.setCancelable(false);
+        progressDialog.show();
+        new Thread(
+                new Runnable() {
+                    @Override
+                    public void run() {
+                        while (progressStatus < progressDialog.getMax()){
+                            try{
+                                Thread.sleep(200);
+                                progressStatus += 5;
+                            }catch (InterruptedException e){
+                                e.printStackTrace();
+                            }
+                            handler.post(new Runnable() {
+                                @Override
+                                public void run() {
+                                    progressDialog.setProgress(progressStatus);
+                                }
+                            });
+                        }
+                        progressDialog.dismiss();
+                        progressStatus = 0;
+
+                        progressDialog.setProgress(progressStatus);
+                    }
+                }
+        ).start();
+
     }
 
+    private NotificationManager mNotifyManager;
+    private NotificationCompat.Builder mBuilder;
+    int id = 004;
     public void showNotificationProgressDialog(){
+        mNotifyManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+        mBuilder = new NotificationCompat.Builder(getApplicationContext(), "");
+        mBuilder.setContentTitle("Descargar Archivo")
+                .setContentText("Descarga en Progreso")
+                .setSmallIcon(android.R.drawable.arrow_down_float);
+            new Thread(
+                    new Runnable() {
+                        @Override
+                        public void run() {
+                            int incr;
+                            for (incr = 0; incr <= 100; incr+=5) {
+                                //101/5000
+//Establece el indicador de progreso en un valor máximo, el porcentaje de finalización actual y el estado "determinado"
+                                mBuilder.setProgress(100, incr, false);
+                                // Muestra el progress dialog por primera vez
+                                mNotifyManager.notify(id, mBuilder.build());
+                                // Duerme el hilo, simulando una operación
+                                try {
+                                    Thread.sleep(1*1000);
+                                } catch (InterruptedException e) {
+                                    Log.d("TAG", "sleep failure");
+                                    }
+                            }
+// Se actualiza la notifiacion
+                            mBuilder.setContentText("Descarga Completa")
+                                    // Quitar el ProgressBar
+                            .setProgress(0,0,false);
+                            mNotifyManager.notify(id, mBuilder.build());
+                        }
+                    }
+            ).start();
+        }
 
-    }
 
     public void showSpinner(){
 
     }
-
 
   /*  @Override
     protected void onCreate(Bundle savedInstanceState) {
